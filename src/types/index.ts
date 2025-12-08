@@ -1,0 +1,62 @@
+// 单次训练记录
+export interface ExerciseEntry {
+    id: string;
+    user_id: string;
+    date: string; // YYYY-MM-DD
+    exercise: string;
+    count: number;
+    duration: number; // 分钟
+    feeling: string;
+    created_at: string;
+    updated_at: string;
+}
+
+// 日训练汇总
+export interface DayRecord {
+    date: string;
+    entries: ExerciseEntry[];
+    totalDuration: number;
+}
+
+// 周训练数据
+export interface WeekData {
+    weekStart: string;
+    weekEnd: string;
+    days: DayRecord[];
+}
+
+// AI 周总结
+export interface WeeklySummary {
+    id: string;
+    user_id: string;
+    week_start: string;
+    total_duration: number;
+    exercise_stats: Record<string, number>;
+    comparison_with_last_week: string;
+    improvement_suggestions: string;
+    generated_at: string;
+    created_at: string;
+}
+
+// 表单数据
+export interface ExerciseFormData {
+    date: string;
+    exercise: string;
+    count: number;
+    duration: number;
+    feeling: string;
+}
+
+// 常用训练动作
+export const COMMON_EXERCISES = [
+    '俯卧撑',
+    '深蹲',
+    '引体向上',
+    '仰卧起坐',
+    '平板支撑',
+    '跑步',
+    '跳绳',
+    '哑铃弯举',
+    '硬拉',
+    '卧推',
+] as const;
