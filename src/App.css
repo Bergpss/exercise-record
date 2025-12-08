@@ -69,3 +69,8 @@
     padding: 1rem;
   }
 }
+
+/* 全屏加载状态 */
+.loading-state.full-screen {
+  min-height: 100vh;
+}

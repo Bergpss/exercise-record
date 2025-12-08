@@ -7,6 +7,8 @@ interface HeaderProps {
     onNextWeek: () => void;
     onToday: () => void;
     onAddClick: () => void;
+    userEmail?: string;
+    onSignOut?: () => void;
 }
 
 export function Header({
@@ -15,6 +17,8 @@ export function Header({
     onNextWeek,
     onToday,
     onAddClick,
+    userEmail,
+    onSignOut,
 }: HeaderProps) {
     return (
         <header className="header">
@@ -42,6 +46,19 @@ export function Header({
                     <span>添加记录</span>
                 </button>
             </div>
+
+            {userEmail && (
+                <div className="header-user">
+                    <span className="user-email" title={userEmail}>
+                        {userEmail.split('@')[0]}
+                    </span>
+                    {onSignOut && (
+                        <button className="sign-out-btn" onClick={onSignOut} title="退出登录">
+                            退出
+                        </button>
+                    )}
+                </div>
+            )}
         </header>
     );
 }

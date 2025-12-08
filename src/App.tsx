@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from './contexts/AuthContext';
+import { Auth } from './components/Auth/Auth';
 import { Header } from './components/Header/Header';
 import { WeekView } from './components/WeekView/WeekView';
 import { ExerciseForm } from './components/ExerciseForm/ExerciseForm';
@@ -23,6 +25,8 @@ import type { DayRecord, ExerciseEntry, ExerciseFormData, WeeklySummary } from '
 import './App.css';
 
 function App() {
+  const { user, loading: authLoading, signOut } = useAuth();
+
   // 当前周起始日期
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => getWeekStart(new Date()));
 
@@ -45,6 +49,8 @@ function App() {
 
   // 加载周数据
   const loadWeekData = useCallback(async () => {
+    if (!user) return;
+
     setIsLoading(true);
     setError(null);
 
@@ -82,11 +88,13 @@ function App() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentWeekStart]);
+  }, [currentWeekStart, user]);
 
   useEffect(() => {
-    loadWeekData();
-  }, [loadWeekData]);
+    if (user) {
+      loadWeekData();
+    }
+  }, [loadWeekData, user]);
 
   // 导航处理
   const handlePrevWeek = () => {
@@ -182,6 +190,28 @@ function App() {
     }
   };
 
+  // 登出处理
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  // 认证加载中
+  if (authLoading) {
+    return (
+      <div className="app">
+        <div className="loading-state full-screen">
+          <div className="loading-spinner large"></div>
+          <span>加载中...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // 未登录显示登录页面
+  if (!user) {
+    return <Auth />;
+  }
+
   return (
     <div className="app">
       <Header
@@ -190,6 +220,8 @@ function App() {
         onNextWeek={handleNextWeek}
         onToday={handleToday}
         onAddClick={() => handleAddClick()}
+        userEmail={user.email}
+        onSignOut={handleSignOut}
       />
 
       <main className="main-content">
