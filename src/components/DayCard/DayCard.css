@@ -73,6 +73,7 @@
     background: var(--bg-input);
     border-radius: var(--radius-sm);
     font-size: 0.8rem;
+    white-space: nowrap;
 }
 
 .stat-icon {
@@ -107,6 +108,8 @@
     background: var(--bg-input);
     border-radius: var(--radius-sm);
     transition: all var(--transition-fast);
+    flex-wrap: wrap;
+    gap: 0.25rem;
 }
 
 .exercise-item:hover {
@@ -117,21 +120,26 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    flex-wrap: wrap;
+    min-width: 0;
 }
 
 .exercise-name {
     font-weight: 500;
     color: var(--text-primary);
+    white-space: nowrap;
 }
 
 .exercise-count {
     color: var(--success-color);
     font-size: 0.85rem;
+    white-space: nowrap;
 }
 
 .exercise-duration {
     color: var(--text-muted);
     font-size: 0.8rem;
+    white-space: nowrap;
 }
 
 .exercise-actions {
