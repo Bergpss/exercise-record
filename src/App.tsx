@@ -47,11 +47,32 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 加载周数据
-  const loadWeekData = useCallback(async () => {
+  // 将 entries 转换为 records Map 的辅助函数
+  const entriesToRecordsMap = useCallback((entriesData: ExerciseEntry[]) => {
+    const recordsMap = new Map<string, DayRecord>();
+    entriesData.forEach((entry) => {
+      const existing = recordsMap.get(entry.date);
+      if (existing) {
+        existing.entries.push(entry);
+        existing.totalDuration += entry.duration;
+      } else {
+        recordsMap.set(entry.date, {
+          date: entry.date,
+          entries: [entry],
+          totalDuration: entry.duration,
+        });
+      }
+    });
+    return recordsMap;
+  }, []);
+
+  // 加载周数据（只在首次加载或切换周时显示loading）
+  const loadWeekData = useCallback(async (showLoading = true) => {
     if (!user) return;
 
-    setIsLoading(true);
+    if (showLoading) {
+      setIsLoading(true);
+    }
     setError(null);
 
     try {
@@ -61,23 +82,7 @@ function App() {
       // 获取训练记录
       const entriesData = await getExerciseEntries(weekStartStr, weekEndStr);
       setEntries(entriesData);
-
-      // 按日期分组
-      const recordsMap = new Map<string, DayRecord>();
-      entriesData.forEach((entry) => {
-        const existing = recordsMap.get(entry.date);
-        if (existing) {
-          existing.entries.push(entry);
-          existing.totalDuration += entry.duration;
-        } else {
-          recordsMap.set(entry.date, {
-            date: entry.date,
-            entries: [entry],
-            totalDuration: entry.duration,
-          });
-        }
-      });
-      setRecords(recordsMap);
+      setRecords(entriesToRecordsMap(entriesData));
 
       // 获取周总结
       const summary = await getWeeklySummary(weekStartStr);
@@ -86,9 +91,11 @@ function App() {
       console.error('Error loading week data:', err);
       setError('加载数据失败，请检查网络连接');
     } finally {
-      setIsLoading(false);
+      if (showLoading) {
+        setIsLoading(false);
+      }
     }
-  }, [currentWeekStart, user]);
+  }, [currentWeekStart, user, entriesToRecordsMap]);
 
   useEffect(() => {
     if (user) {
@@ -128,11 +135,26 @@ function App() {
   const handleDeleteClick = async (entryId: string) => {
     if (!confirm('确定要删除这条记录吗？')) return;
 
+    // 乐观更新：立即从本地状态中移除
+    const deletedEntry = entries.find((e) => e.id === entryId);
+    const newEntries = entries.filter((e) => e.id !== entryId);
+    setEntries(newEntries);
+    setRecords(entriesToRecordsMap(newEntries));
+
     try {
       await deleteExerciseEntry(entryId);
-      await loadWeekData();
+      // 后台静默刷新数据以确保同步
+      loadWeekData(false);
     } catch (err) {
       console.error('Error deleting entry:', err);
+      // 回滚：恢复被删除的记录
+      if (deletedEntry) {
+        const restoredEntries = [...newEntries, deletedEntry].sort(
+          (a, b) => a.date.localeCompare(b.date) || a.created_at.localeCompare(b.created_at)
+        );
+        setEntries(restoredEntries);
+        setRecords(entriesToRecordsMap(restoredEntries));
+      }
       alert('删除失败，请重试');
     }
   };
@@ -144,15 +166,45 @@ function App() {
   };
 
   const handleFormSubmit = async (formData: ExerciseFormData) => {
+    // 创建临时的乐观更新数据
+    const tempId = `temp-${Date.now()}`;
+    const now = new Date().toISOString();
+    const optimisticEntry: ExerciseEntry = {
+      id: editingEntry?.id || tempId,
+      user_id: user?.id || '',
+      date: formData.date,
+      exercise: formData.exercise,
+      count: formData.count,
+      duration: formData.duration,
+      weight: formData.weight,
+      feeling: formData.feeling,
+      created_at: editingEntry?.created_at || now,
+      updated_at: now,
+    };
+
+    // 乐观更新本地状态
+    let newEntries: ExerciseEntry[];
+    if (editingEntry) {
+      newEntries = entries.map((e) => (e.id === editingEntry.id ? optimisticEntry : e));
+    } else {
+      newEntries = [...entries, optimisticEntry];
+    }
+    newEntries.sort((a, b) => a.date.localeCompare(b.date) || a.created_at.localeCompare(b.created_at));
+    setEntries(newEntries);
+    setRecords(entriesToRecordsMap(newEntries));
+
     try {
       if (editingEntry) {
         await updateExerciseEntry(editingEntry.id, formData);
       } else {
         await addExerciseEntry(formData);
       }
-      await loadWeekData();
+      // 后台静默刷新以获取正确的服务器数据（如真实ID）
+      loadWeekData(false);
     } catch (err) {
       console.error('Error saving entry:', err);
+      // 回滚：重新加载数据
+      loadWeekData(false);
       alert('保存失败，请重试');
     }
   };
@@ -229,7 +281,7 @@ function App() {
           <div className="error-message">
             <span>❌</span>
             <span>{error}</span>
-            <button className="btn btn-secondary" onClick={loadWeekData}>
+            <button className="btn btn-secondary" onClick={() => loadWeekData()}>
               重试
             </button>
           </div>
