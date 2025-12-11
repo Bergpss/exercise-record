@@ -1,5 +1,5 @@
 import type { DayRecord } from '../../types';
-import { getDayName, formatDateShort, isToday } from '../../utils/dateUtils';
+import { getDayName, formatDate, formatDateShort, isToday } from '../../utils/dateUtils';
 import './DayCard.css';
 
 interface DayCardProps {
@@ -19,7 +19,7 @@ export function DayCard({
 }: DayCardProps) {
     const today = isToday(date);
     const hasEntries = record && record.entries.length > 0;
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatDate(date);
 
     return (
         <div className={`day-card ${today ? 'is-today' : ''} ${!hasEntries ? 'is-rest' : ''}`}>
@@ -54,6 +54,11 @@ export function DayCard({
                                 <div className="exercise-info">
                                     <span className="exercise-name">{entry.exercise}</span>
                                     <span className="exercise-count">×{entry.count}</span>
+                                    {entry.weight ? (
+                                        <span className="exercise-weight">{entry.weight}kg</span>
+                                    ) : (
+                                        <span className="exercise-weight bodyweight">徒手</span>
+                                    )}
                                     <span className="exercise-duration">{entry.duration}分钟</span>
                                 </div>
                                 <div className="exercise-actions">

@@ -6,6 +6,7 @@ export interface ExerciseEntry {
     exercise: string;
     count: number;
     duration: number; // 分钟
+    weight?: number; // 负重（kg），为空或0表示徒手
     feeling: string;
     created_at: string;
     updated_at: string;
@@ -44,6 +45,7 @@ export interface ExerciseFormData {
     exercise: string;
     count: number;
     duration: number;
+    weight?: number; // 负重（kg），为空或0表示徒手
     feeling: string;
 }
 

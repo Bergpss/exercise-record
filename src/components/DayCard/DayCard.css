@@ -142,6 +142,22 @@
     white-space: nowrap;
 }
 
+.exercise-weight {
+    color: var(--warning-color);
+    font-size: 0.8rem;
+    font-weight: 500;
+    white-space: nowrap;
+    padding: 0.1rem 0.4rem;
+    background: rgba(237, 137, 54, 0.15);
+    border-radius: var(--radius-sm);
+}
+
+.exercise-weight.bodyweight {
+    color: var(--text-muted);
+    background: rgba(113, 128, 150, 0.15);
+    font-weight: 400;
+}
+
 .exercise-actions {
     display: flex;
     gap: 0.25rem;

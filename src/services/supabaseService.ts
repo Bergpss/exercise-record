@@ -41,6 +41,7 @@ export async function addExerciseEntry(
             exercise: formData.exercise,
             count: formData.count,
             duration: formData.duration,
+            weight: formData.weight || null,
             feeling: formData.feeling,
         })
         .select()

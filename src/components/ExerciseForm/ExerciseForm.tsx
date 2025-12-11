@@ -23,6 +23,7 @@ export function ExerciseForm({
         exercise: '',
         count: 0,
         duration: 0,
+        weight: undefined,
         feeling: '',
     });
 
@@ -33,6 +34,7 @@ export function ExerciseForm({
                 exercise: initialData.exercise,
                 count: initialData.count,
                 duration: initialData.duration,
+                weight: initialData.weight,
                 feeling: initialData.feeling,
             });
         } else if (defaultDate) {
@@ -56,6 +58,7 @@ export function ExerciseForm({
             exercise: '',
             count: 0,
             duration: 0,
+            weight: undefined,
             feeling: '',
         });
         onClose();
@@ -151,6 +154,24 @@ export function ExerciseForm({
                                     }
                                 />
                             </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label className="label">负重（kg）</label>
+                            <input
+                                type="number"
+                                className="input"
+                                min="0"
+                                step="0.5"
+                                placeholder="不填写表示徒手训练"
+                                value={formData.weight || ''}
+                                onChange={(e) =>
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        weight: e.target.value ? parseFloat(e.target.value) : undefined,
+                                    }))
+                                }
+                            />
                         </div>
 
                         <div className="form-group">
