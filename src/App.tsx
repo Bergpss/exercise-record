@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { Auth } from './components/Auth/Auth';
 import { Header } from './components/Header/Header';
@@ -46,6 +46,9 @@ function App() {
   // 加载状态
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // 追踪上次加载的上下文，用于避免标签页切换时显示加载状态
+  const lastLoadedContextRef = useRef<string | null>(null);
 
   // 将 entries 转换为 records Map 的辅助函数
   const entriesToRecordsMap = useCallback((entriesData: ExerciseEntry[]) => {
@@ -99,9 +102,16 @@ function App() {
 
   useEffect(() => {
     if (user) {
-      loadWeekData();
+      const currentContextKey = `${user.id}-${formatDate(currentWeekStart)}`;
+      const showLoading = lastLoadedContextRef.current !== currentContextKey;
+
+      if (showLoading) {
+        lastLoadedContextRef.current = currentContextKey;
+      }
+
+      loadWeekData(showLoading);
     }
-  }, [loadWeekData, user]);
+  }, [loadWeekData, user, currentWeekStart]);
 
   // 导航处理
   const handlePrevWeek = () => {
