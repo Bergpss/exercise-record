@@ -45,6 +45,44 @@ export default async function handler(req: Request): Promise<Response> {
         });
     }
 
+    // Require authentication (Supabase access token)
+    const authHeader = req.headers.get('authorization') || req.headers.get('Authorization');
+    const bearerMatch = authHeader?.match(/^Bearer\s+(.+)$/i);
+    const accessToken = bearerMatch?.[1]?.trim();
+
+    if (!accessToken) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    }
+
+    const supabaseUrlRaw = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+    const supabaseUrl = supabaseUrlRaw ? supabaseUrlRaw.replace(/\/+$/, '') : supabaseUrlRaw;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+        return new Response(JSON.stringify({ error: 'Server configuration error' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    }
+
+    // Validate token against Supabase Auth
+    const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            apikey: supabaseAnonKey,
+        },
+    });
+
+    if (!userResponse.ok) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    }
+
     // Get API key from server environment (NOT exposed to frontend)
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {

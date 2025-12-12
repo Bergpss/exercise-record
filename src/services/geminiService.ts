@@ -1,4 +1,5 @@
 import type { ExerciseEntry, WeeklySummary } from '../types';
+import { supabase } from '../lib/supabase';
 import { calculateWeekStats } from './supabaseService';
 
 /**
@@ -10,10 +11,19 @@ export async function generateWeeklySummary(
     weekStart: string
 ): Promise<Omit<WeeklySummary, 'id' | 'user_id' | 'created_at'>> {
     try {
+        const {
+            data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+            throw new Error('Not authenticated');
+        }
+
         const response = await fetch('/api/generate-summary', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
             },
             body: JSON.stringify({
                 currentWeekEntries,
