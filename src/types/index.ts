@@ -39,13 +39,18 @@ export interface WeeklySummary {
     created_at: string;
 }
 
+// 单组数据（负重 × 次数）
+export interface ExerciseSet {
+    weight?: number; // 负重（kg），为空或0表示徒手
+    count: number;   // 次数
+}
+
 // 表单数据
 export interface ExerciseFormData {
     date: string;
     exercise: string;
-    count: number;
-    duration: number;
-    weight?: number; // 负重（kg），为空或0表示徒手
+    sets: ExerciseSet[];  // 多组训练数据
+    duration: number;     // 总时长（分钟）
     feeling: string;
 }
 

@@ -176,28 +176,30 @@ function App() {
   };
 
   const handleFormSubmit = async (formData: ExerciseFormData) => {
-    // 创建临时的乐观更新数据
-    const tempId = `temp-${Date.now()}`;
     const now = new Date().toISOString();
-    const optimisticEntry: ExerciseEntry = {
-      id: editingEntry?.id || tempId,
+
+    // 为每组创建乐观更新数据
+    const optimisticEntries: ExerciseEntry[] = formData.sets.map((set, index) => ({
+      id: editingEntry?.id ? `${editingEntry.id}-temp-${index}` : `temp-${Date.now()}-${index}`,
       user_id: user?.id || '',
       date: formData.date,
       exercise: formData.exercise,
-      count: formData.count,
+      count: set.count,
       duration: formData.duration,
-      weight: formData.weight,
+      weight: set.weight,
       feeling: formData.feeling,
       created_at: editingEntry?.created_at || now,
       updated_at: now,
-    };
+    }));
 
     // 乐观更新本地状态
     let newEntries: ExerciseEntry[];
     if (editingEntry) {
-      newEntries = entries.map((e) => (e.id === editingEntry.id ? optimisticEntry : e));
+      // 编辑：移除旧记录，添加新记录
+      newEntries = entries.filter((e) => e.id !== editingEntry.id).concat(optimisticEntries);
     } else {
-      newEntries = [...entries, optimisticEntry];
+      // 新增：直接添加
+      newEntries = entries.concat(optimisticEntries);
     }
     newEntries.sort((a, b) => a.date.localeCompare(b.date) || a.created_at.localeCompare(b.created_at));
     setEntries(newEntries);

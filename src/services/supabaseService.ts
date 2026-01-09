@@ -26,58 +26,71 @@ export async function getExerciseEntries(
 }
 
 /**
- * 添加训练记录
+ * 添加训练记录（支持多组数据）
  */
 export async function addExerciseEntry(
     formData: ExerciseFormData
-): Promise<ExerciseEntry> {
+): Promise<ExerciseEntry[]> {
     const { data: userData } = await supabase.auth.getUser();
+
+    // 为每组创建一条记录，只有第一条记录总时长，其他组时长为0
+    const entriesToInsert = formData.sets.map((set, index) => ({
+        user_id: userData.user?.id,
+        date: formData.date,
+        exercise: formData.exercise,
+        count: set.count,
+        duration: index === 0 ? formData.duration : 0, // 只有第一条记录总时长
+        weight: set.weight || null,
+        feeling: formData.feeling,
+    }));
 
     const { data, error } = await supabase
         .from('exercise_entries')
-        .insert({
-            user_id: userData.user?.id,
-            date: formData.date,
-            exercise: formData.exercise,
-            count: formData.count,
-            duration: formData.duration,
-            weight: formData.weight || null,
-            feeling: formData.feeling,
-        })
-        .select()
-        .single();
+        .insert(entriesToInsert)
+        .select();
 
     if (error) {
-        console.error('Error adding exercise entry:', error);
+        console.error('Error adding exercise entries:', error);
         throw error;
     }
 
-    return data;
+    return data || [];
 }
 
 /**
- * 更新训练记录
+ * 更新训练记录（删除旧记录并创建新的多条记录）
  */
 export async function updateExerciseEntry(
     id: string,
-    formData: Partial<ExerciseFormData>
-): Promise<ExerciseEntry> {
+    formData: ExerciseFormData
+): Promise<ExerciseEntry[]> {
+    const { data: userData } = await supabase.auth.getUser();
+
+    // 先删除旧记录
+    await supabase.from('exercise_entries').delete().eq('id', id);
+
+    // 为每组创建新记录，只有第一条记录总时长，其他组时长为0
+    const entriesToInsert = formData.sets.map((set, index) => ({
+        user_id: userData.user?.id,
+        date: formData.date,
+        exercise: formData.exercise,
+        count: set.count,
+        duration: index === 0 ? formData.duration : 0, // 只有第一条记录总时长
+        weight: set.weight || null,
+        feeling: formData.feeling,
+    }));
+
     const { data, error } = await supabase
         .from('exercise_entries')
-        .update({
-            ...formData,
-            updated_at: new Date().toISOString(),
-        })
-        .eq('id', id)
-        .select()
-        .single();
+        .insert(entriesToInsert)
+        .select();
 
     if (error) {
-        console.error('Error updating exercise entry:', error);
+        console.error('Error updating exercise entries:', error);
         throw error;
     }
 
-    return data;
+    return data || [];
 }
 
 /**
