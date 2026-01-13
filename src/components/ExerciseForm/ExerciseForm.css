@@ -130,6 +130,97 @@
     box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
 }
 
+.suggestion-btn.add-exercise-btn {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: var(--success);
+    font-weight: 600;
+}
+
+.suggestion-btn.add-exercise-btn:hover {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: var(--success);
+}
+
+.exercise-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    position: relative;
+}
+
+.exercise-edit-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.exercise-edit-item .input-sm {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+    min-width: 100px;
+    max-width: 150px;
+}
+
+.exercise-edit-btn {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    background: transparent;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.exercise-edit-btn:hover {
+    background: var(--bg-surface-hover);
+    color: var(--text-main);
+    transform: scale(1.1);
+}
+
+.exercise-edit-btn.edit {
+    color: var(--color-primary);
+}
+
+.exercise-edit-btn.edit:hover {
+    background: rgba(124, 58, 237, 0.1);
+    color: var(--color-primary);
+}
+
+.exercise-edit-btn.delete {
+    color: var(--error);
+}
+
+.exercise-edit-btn.delete:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--error);
+}
+
+.exercise-edit-btn.save {
+    color: var(--success);
+}
+
+.exercise-edit-btn.save:hover {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+}
+
+.exercise-edit-btn.cancel {
+    color: var(--text-muted);
+}
+
+.exercise-edit-btn.cancel:hover {
+    background: var(--bg-surface-hover);
+    color: var(--text-main);
+}
+
 .sets-header {
     display: flex;
     align-items: center;

@@ -41,8 +41,9 @@ No test framework is currently configured.
 
 - `exercise_entries` - Individual workout records
 - `weekly_summaries` - AI-generated weekly analysis
+- `user_exercises` - User-customized exercise suggestions
 
-Both tables use Row Level Security filtered by authenticated user.
+All tables use Row Level Security filtered by authenticated user.
 
 ## Conventions
 
@@ -51,7 +52,7 @@ Both tables use Row Level Security filtered by authenticated user.
 - **Date formats**: `YYYY-MM-DD` for storage, `MM/DD` for display
 - **Component exports**: Named exports (not default)
 - **Props interfaces**: Defined inline in component files
-- **Common exercises**: Defined in `COMMON_EXERCISES` constant in `src/types/index.ts`
+- **Common exercises**: Default exercises defined in `COMMON_EXERCISES` constant in `src/types/index.ts`, user custom exercises stored in `user_exercises` table
 
 ## Environment Variables
 

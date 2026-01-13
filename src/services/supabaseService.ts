@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { ExerciseEntry, ExerciseFormData, WeeklySummary } from '../types';
+import type { ExerciseEntry, ExerciseFormData, WeeklySummary, UserExercise } from '../types';
 // Date utilities imported as needed
 
 /**
@@ -177,4 +177,111 @@ export function calculateWeekStats(entries: ExerciseEntry[]): {
     });
 
     return { totalDuration, exerciseStats };
+}
+
+/**
+ * 获取用户自定义动作列表
+ */
+export async function getUserExercises(): Promise<UserExercise[]> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+        return [];
+    }
+
+    const { data, error } = await supabase
+        .from('user_exercises')
+        .select('*')
+        .eq('user_id', userData.user.id)
+        .order('created_at', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching user exercises:', error);
+        throw error;
+    }
+
+    return data || [];
+}
+
+/**
+ * 添加用户自定义动作
+ */
+export async function addUserExercise(exercise: string): Promise<UserExercise> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+        throw new Error('User not authenticated');
+    }
+
+    // 检查是否已存在
+    const { data: existing } = await supabase
+        .from('user_exercises')
+        .select('*')
+        .eq('user_id', userData.user.id)
+        .eq('exercise', exercise.trim())
+        .single();
+
+    if (existing) {
+        return existing;
+    }
+
+    const { data, error } = await supabase
+        .from('user_exercises')
+        .insert({
+            user_id: userData.user.id,
+            exercise: exercise.trim(),
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error adding user exercise:', error);
+        throw error;
+    }
+
+    return data;
+}
+
+/**
+ * 更新用户自定义动作
+ */
+export async function updateUserExercise(id: string, exercise: string): Promise<UserExercise> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+        throw new Error('User not authenticated');
+    }
+
+    const { data, error } = await supabase
+        .from('user_exercises')
+        .update({ exercise: exercise.trim() })
+        .eq('id', id)
+        .eq('user_id', userData.user.id)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating user exercise:', error);
+        throw error;
+    }
+
+    return data;
+}
+
+/**
+ * 删除用户自定义动作
+ */
+export async function deleteUserExercise(id: string): Promise<void> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+        throw new Error('User not authenticated');
+    }
+
+    const { error } = await supabase
+        .from('user_exercises')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userData.user.id);
+
+    if (error) {
+        console.error('Error deleting user exercise:', error);
+        throw error;
+    }
 }

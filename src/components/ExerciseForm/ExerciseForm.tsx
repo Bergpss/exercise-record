@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
-import type { ExerciseFormData, ExerciseEntry, ExerciseSet } from '../../types';
+import type { ExerciseFormData, ExerciseEntry, ExerciseSet, UserExercise } from '../../types';
 import { COMMON_EXERCISES } from '../../types';
+import {
+    getUserExercises,
+    addUserExercise,
+    updateUserExercise,
+    deleteUserExercise,
+} from '../../services/supabaseService';
 import './ExerciseForm.css';
 
 interface ExerciseFormProps {
@@ -25,6 +31,27 @@ export function ExerciseForm({
         duration: 0,
         feeling: '',
     });
+    const [userExercises, setUserExercises] = useState<UserExercise[]>([]);
+    const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
+    const [editingExerciseName, setEditingExerciseName] = useState<string>('');
+    const [isAddingExercise, setIsAddingExercise] = useState(false);
+    const [newExerciseName, setNewExerciseName] = useState('');
+
+    // 加载用户自定义动作
+    useEffect(() => {
+        if (isOpen) {
+            loadUserExercises();
+        }
+    }, [isOpen]);
+
+    const loadUserExercises = async () => {
+        try {
+            const exercises = await getUserExercises();
+            setUserExercises(exercises);
+        } catch (error) {
+            console.error('Failed to load user exercises:', error);
+        }
+    };
 
     useEffect(() => {
         if (initialData) {
@@ -41,7 +68,7 @@ export function ExerciseForm({
         }
     }, [initialData, defaultDate]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.exercise.trim()) {
             alert('请输入训练动作');
@@ -51,6 +78,22 @@ export function ExerciseForm({
             alert('请至少添加一组训练');
             return;
         }
+
+        // 自动保存用户输入的动作到常用动作列表
+        const exerciseName = formData.exercise.trim();
+        const isDefaultExercise = COMMON_EXERCISES.includes(exerciseName as any);
+        const isUserExercise = userExercises.some((ue) => ue.exercise === exerciseName);
+
+        if (!isDefaultExercise && !isUserExercise) {
+            try {
+                await addUserExercise(exerciseName);
+                await loadUserExercises();
+            } catch (error) {
+                console.error('Failed to save exercise:', error);
+                // 即使保存失败也继续提交表单
+            }
+        }
+
         onSubmit(formData);
         handleClose();
     };
@@ -97,6 +140,82 @@ export function ExerciseForm({
         }));
     };
 
+    // 开始编辑动作
+    const startEditExercise = (exercise: UserExercise) => {
+        setEditingExerciseId(exercise.id);
+        setEditingExerciseName(exercise.exercise);
+    };
+
+    // 保存编辑的动作
+    const saveEditExercise = async () => {
+        if (!editingExerciseId || !editingExerciseName.trim()) {
+            return;
+        }
+
+        try {
+            // 保存旧的动作名称，用于检查是否需要更新表单
+            const oldExercise = userExercises.find((ue) => ue.id === editingExerciseId);
+            const wasSelected = oldExercise && formData.exercise === oldExercise.exercise;
+
+            await updateUserExercise(editingExerciseId, editingExerciseName.trim());
+            await loadUserExercises();
+            setEditingExerciseId(null);
+            setEditingExerciseName('');
+
+            // 如果当前选中的动作被编辑了，更新表单
+            if (wasSelected) {
+                setFormData((prev) => ({ ...prev, exercise: editingExerciseName.trim() }));
+            }
+        } catch (error) {
+            console.error('Failed to update exercise:', error);
+            alert('更新动作失败，请重试');
+        }
+    };
+
+    // 取消编辑
+    const cancelEditExercise = () => {
+        setEditingExerciseId(null);
+        setEditingExerciseName('');
+    };
+
+    // 删除动作
+    const handleDeleteExercise = async (id: string) => {
+        if (!confirm('确定要删除这个常用动作吗？')) {
+            return;
+        }
+
+        try {
+            await deleteUserExercise(id);
+            await loadUserExercises();
+
+            // 如果当前选中的动作被删除了，清空表单
+            const deletedExercise = userExercises.find((ue) => ue.id === id);
+            if (deletedExercise && formData.exercise === deletedExercise.exercise) {
+                setFormData((prev) => ({ ...prev, exercise: '' }));
+            }
+        } catch (error) {
+            console.error('Failed to delete exercise:', error);
+            alert('删除动作失败，请重试');
+        }
+    };
+
+    // 添加新动作
+    const handleAddExercise = async () => {
+        if (!newExerciseName.trim()) {
+            return;
+        }
+
+        try {
+            await addUserExercise(newExerciseName.trim());
+            await loadUserExercises();
+            setNewExerciseName('');
+            setIsAddingExercise(false);
+        } catch (error) {
+            console.error('Failed to add exercise:', error);
+            alert('添加动作失败，请重试');
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -137,6 +256,7 @@ export function ExerciseForm({
                                 }
                             />
                             <div className="exercise-suggestions">
+                                {/* 默认预设动作 */}
                                 {COMMON_EXERCISES.map((exercise) => (
                                     <button
                                         key={exercise}
@@ -149,6 +269,128 @@ export function ExerciseForm({
                                         {exercise}
                                     </button>
                                 ))}
+
+                                {/* 用户自定义动作 */}
+                                {userExercises.map((userExercise) => {
+                                    if (editingExerciseId === userExercise.id) {
+                                        return (
+                                            <div key={userExercise.id} className="exercise-edit-item">
+                                                <input
+                                                    type="text"
+                                                    className="input input-sm"
+                                                    value={editingExerciseName}
+                                                    onChange={(e) => setEditingExerciseName(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            saveEditExercise();
+                                                        } else if (e.key === 'Escape') {
+                                                            cancelEditExercise();
+                                                        }
+                                                    }}
+                                                    autoFocus
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="exercise-edit-btn save"
+                                                    onClick={saveEditExercise}
+                                                    title="保存"
+                                                >
+                                                    ✓
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="exercise-edit-btn cancel"
+                                                    onClick={cancelEditExercise}
+                                                    title="取消"
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <div key={userExercise.id} className="exercise-item">
+                                            <button
+                                                type="button"
+                                                className={`suggestion-btn ${
+                                                    formData.exercise === userExercise.exercise ? 'active' : ''
+                                                }`}
+                                                onClick={() => selectExercise(userExercise.exercise)}
+                                            >
+                                                {userExercise.exercise}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="exercise-edit-btn edit"
+                                                onClick={() => startEditExercise(userExercise)}
+                                                title="编辑"
+                                            >
+                                                ✎
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="exercise-edit-btn delete"
+                                                onClick={() => handleDeleteExercise(userExercise.id)}
+                                                title="删除"
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+
+                                {/* 添加新动作 */}
+                                {isAddingExercise ? (
+                                    <div className="exercise-edit-item">
+                                        <input
+                                            type="text"
+                                            className="input input-sm"
+                                            placeholder="输入动作名称"
+                                            value={newExerciseName}
+                                            onChange={(e) => setNewExerciseName(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    handleAddExercise();
+                                                } else if (e.key === 'Escape') {
+                                                    setIsAddingExercise(false);
+                                                    setNewExerciseName('');
+                                                }
+                                            }}
+                                            autoFocus
+                                        />
+                                        <button
+                                            type="button"
+                                            className="exercise-edit-btn save"
+                                            onClick={handleAddExercise}
+                                            title="添加"
+                                        >
+                                            ✓
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="exercise-edit-btn cancel"
+                                            onClick={() => {
+                                                setIsAddingExercise(false);
+                                                setNewExerciseName('');
+                                            }}
+                                            title="取消"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        className="suggestion-btn add-exercise-btn"
+                                        onClick={() => setIsAddingExercise(true)}
+                                        title="添加常用动作"
+                                    >
+                                        + 添加
+                                    </button>
+                                )}
                             </div>
                         </div>
 

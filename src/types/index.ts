@@ -54,7 +54,7 @@ export interface ExerciseFormData {
     feeling: string;
 }
 
-// 常用训练动作
+// 常用训练动作（默认预设）
 export const COMMON_EXERCISES = [
     '俯卧撑',
     '深蹲',
@@ -67,3 +67,12 @@ export const COMMON_EXERCISES = [
     '硬拉',
     '卧推',
 ] as const;
+
+// 用户自定义动作
+export interface UserExercise {
+    id: string;
+    user_id: string;
+    exercise: string;
+    created_at: string;
+    updated_at: string;
+}
