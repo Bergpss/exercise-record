@@ -1,5 +1,20 @@
 import { GoogleGenAI } from '@google/genai';
 
+// Vercel serverless function types
+interface VercelRequest {
+    method?: string;
+    headers: Record<string, string | string[] | undefined>;
+    body?: any;
+    query?: Record<string, string | string[]>;
+}
+
+interface VercelResponse {
+    status: (code: number) => VercelResponse;
+    json: (data: any) => void;
+    setHeader: (name: string, value: string) => void;
+    end: () => void;
+}
+
 interface ExerciseEntry {
     id: string;
     date: string;
@@ -36,36 +51,50 @@ function calculateWeekStats(entries: ExerciseEntry[]): WeekStats {
     return { totalDuration, exerciseStats };
 }
 
-export default async function handler(req: Request): Promise<Response> {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+    // Set CORS headers
+    // Note: Cannot use both Access-Control-Allow-Credentials: true and Access-Control-Allow-Origin: *
+    // Since we're using Bearer tokens, we don't need credentials, so we can use *
+    const origin = req.headers.origin;
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader(
+        'Access-Control-Allow-Headers',
+        'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
+    );
+
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
+
     // Only allow POST requests
     if (req.method !== 'POST') {
-        return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-            status: 405,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        return res.status(405).json({ error: 'Method not allowed' });
     }
 
     // Require authentication (Supabase access token)
-    const authHeader = req.headers.get('authorization') || req.headers.get('Authorization');
+    const authHeader = req.headers.authorization || req.headers.Authorization;
     const bearerMatch = authHeader?.match(/^Bearer\s+(.+)$/i);
     const accessToken = bearerMatch?.[1]?.trim();
 
     if (!accessToken) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    // Get environment variables
+    // Support both formats: production (no prefix) and local development (VITE_ prefix)
     const supabaseUrlRaw = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
     const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
     const supabaseUrl = supabaseUrlRaw ? supabaseUrlRaw.replace(/\/+$/, '') : supabaseUrlRaw;
 
     if (!supabaseUrl || !supabaseAnonKey) {
-        return new Response(JSON.stringify({ error: 'Server configuration error' }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        console.error('Missing environment variables:');
+        console.error('  SUPABASE_URL:', supabaseUrlRaw ? 'found' : 'missing');
+        console.error('  SUPABASE_ANON_KEY:', supabaseAnonKey ? 'found' : 'missing');
+        console.error('  VITE_SUPABASE_URL:', process.env.VITE_SUPABASE_URL ? 'found' : 'missing');
+        console.error('  VITE_SUPABASE_ANON_KEY:', process.env.VITE_SUPABASE_ANON_KEY ? 'found' : 'missing');
+        return res.status(500).json({ error: 'Server configuration error: Missing Supabase credentials' });
     }
 
     // Validate token against Supabase Auth
@@ -77,30 +106,25 @@ export default async function handler(req: Request): Promise<Response> {
     });
 
     if (!userResponse.ok) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Get API key from server environment (NOT exposed to frontend)
-    const apiKey = process.env.GEMINI_API_KEY;
+    // Get API key from server environment
+    // Support both formats: production (no prefix) and local development (VITE_ prefix)
+    const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
     if (!apiKey) {
-        return new Response(JSON.stringify({ error: 'Server configuration error' }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        console.error('GEMINI_API_KEY not found in environment');
+        console.error('  GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'found' : 'missing');
+        console.error('  VITE_GEMINI_API_KEY:', process.env.VITE_GEMINI_API_KEY ? 'found' : 'missing');
+        return res.status(500).json({ error: 'Server configuration error: Gemini API key missing' });
     }
 
     try {
-        const body: RequestBody = await req.json();
+        const body: RequestBody = req.body;
         const { currentWeekEntries, lastWeekEntries, weekStart } = body;
 
         if (!currentWeekEntries || !weekStart) {
-            return new Response(JSON.stringify({ error: 'Missing required fields' }), {
-                status: 400,
-                headers: { 'Content-Type': 'application/json' },
-            });
+            return res.status(400).json({ error: 'Missing required fields' });
         }
 
         const ai = new GoogleGenAI({ apiKey });
@@ -149,19 +173,29 @@ ${lastWeekStats ? `【上周训练数据】
 `;
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-preview-05-20',
+            model: 'gemini-2.0-flash',
             contents: prompt,
         });
 
-        const text = response.text || '';
-
-        // Extract JSON
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-            throw new Error('Failed to parse AI response');
+        const text = response.text;
+        if (!text) {
+            throw new Error('AI response is empty');
         }
 
-        const parsed = JSON.parse(jsonMatch[0]);
+        // Extract JSON from response
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            throw new Error('Failed to extract JSON from AI response');
+        }
+
+        let parsed: { comparison_with_last_week?: string; improvement_suggestions?: string };
+        try {
+            parsed = JSON.parse(jsonMatch[0]);
+        } catch (parseError) {
+            console.error('JSON parse error:', parseError);
+            console.error('Response text:', text);
+            throw new Error('Failed to parse AI response as JSON');
+        }
 
         const result = {
             week_start: weekStart,
@@ -172,15 +206,14 @@ ${lastWeekStats ? `【上周训练数据】
             generated_at: new Date().toISOString(),
         };
 
-        return new Response(JSON.stringify(result), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-        });
-    } catch (error) {
+        return res.status(200).json(result);
+    } catch (error: any) {
         console.error('Error generating summary:', error);
-        return new Response(JSON.stringify({ error: 'Failed to generate summary' }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
+        console.error('Error stack:', error.stack);
+        return res.status(500).json({
+            error: 'Failed to generate summary',
+            details: error.message || 'Unknown error',
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 }

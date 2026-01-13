@@ -44,3 +44,4 @@ coverage/
 
 # LLM
 response_from_LLM.md
+.vercel
