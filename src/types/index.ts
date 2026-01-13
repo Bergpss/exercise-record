@@ -12,11 +12,23 @@ export interface ExerciseEntry {
     updated_at: string;
 }
 
+// 每日热身记录
+export interface Warmup {
+    id: string;
+    user_id: string;
+    date: string; // YYYY-MM-DD
+    duration: number; // 热身时长（分钟）
+    description: string; // 热身方式/动作描述
+    created_at: string;
+    updated_at: string;
+}
+
 // 日训练汇总
 export interface DayRecord {
     date: string;
     entries: ExerciseEntry[];
     totalDuration: number;
+    warmup?: Warmup | null; // 当天的热身记录
 }
 
 // 周训练数据
@@ -52,6 +64,13 @@ export interface ExerciseFormData {
     sets: ExerciseSet[];  // 多组训练数据
     duration: number;     // 总时长（分钟）
     feeling: string;
+}
+
+// 热身表单数据
+export interface WarmupFormData {
+    date: string;
+    duration: number;     // 热身时长（分钟）
+    description: string;  // 热身方式/动作描述
 }
 
 // 常用训练动作（默认预设）

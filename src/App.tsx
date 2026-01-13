@@ -12,6 +12,8 @@ import {
   deleteExerciseEntry,
   getWeeklySummary,
   saveWeeklySummary,
+  getWarmups,
+  upsertWarmup,
 } from './services/supabaseService';
 import { generateWeeklySummary } from './services/geminiService';
 import {
@@ -21,7 +23,7 @@ import {
   getPreviousWeekStart,
   getNextWeekStart,
 } from './utils/dateUtils';
-import type { DayRecord, ExerciseEntry, ExerciseFormData, WeeklySummary } from './types';
+import type { DayRecord, ExerciseEntry, ExerciseFormData, WeeklySummary, WarmupFormData } from './types';
 import './App.css';
 
 function App() {
@@ -50,9 +52,16 @@ function App() {
   // 追踪上次加载的上下文，用于避免标签页切换时显示加载状态
   const lastLoadedContextRef = useRef<string | null>(null);
 
-  // 将 entries 转换为 records Map 的辅助函数
-  const entriesToRecordsMap = useCallback((entriesData: ExerciseEntry[]) => {
+  // 将 entries 和 warmups 转换为 records Map 的辅助函数
+  const entriesToRecordsMap = useCallback((entriesData: ExerciseEntry[], warmupsData: any[]) => {
     const recordsMap = new Map<string, DayRecord>();
+    const warmupsMap = new Map<string, any>();
+    
+    // 创建热身数据的 Map
+    warmupsData.forEach((warmup) => {
+      warmupsMap.set(warmup.date, warmup);
+    });
+    
     entriesData.forEach((entry) => {
       const existing = recordsMap.get(entry.date);
       if (existing) {
@@ -63,9 +72,23 @@ function App() {
           date: entry.date,
           entries: [entry],
           totalDuration: entry.duration,
+          warmup: warmupsMap.get(entry.date) || null,
         });
       }
     });
+    
+    // 为只有热身但没有训练记录的日期创建记录
+    warmupsData.forEach((warmup) => {
+      if (!recordsMap.has(warmup.date)) {
+        recordsMap.set(warmup.date, {
+          date: warmup.date,
+          entries: [],
+          totalDuration: 0,
+          warmup: warmup,
+        });
+      }
+    });
+    
     return recordsMap;
   }, []);
 
@@ -82,10 +105,11 @@ function App() {
       const weekStartStr = formatDate(currentWeekStart);
       const weekEndStr = formatDate(getWeekEnd(currentWeekStart));
 
-      // 获取训练记录
+      // 获取训练记录和热身记录
       const entriesData = await getExerciseEntries(weekStartStr, weekEndStr);
+      const warmupsData = await getWarmups(weekStartStr, weekEndStr);
       setEntries(entriesData);
-      setRecords(entriesToRecordsMap(entriesData));
+      setRecords(entriesToRecordsMap(entriesData, warmupsData));
 
       // 获取周总结
       const summary = await getWeeklySummary(weekStartStr);
@@ -163,7 +187,12 @@ function App() {
           (a, b) => a.date.localeCompare(b.date) || a.created_at.localeCompare(b.created_at)
         );
         setEntries(restoredEntries);
-        setRecords(entriesToRecordsMap(restoredEntries));
+        // 重新加载热身数据
+        const weekStartStr = formatDate(currentWeekStart);
+        const weekEndStr = formatDate(getWeekEnd(currentWeekStart));
+        getWarmups(weekStartStr, weekEndStr).then((warmupsData) => {
+          setRecords(entriesToRecordsMap(restoredEntries, warmupsData));
+        });
       }
       alert('删除失败，请重试');
     }
@@ -203,9 +232,13 @@ function App() {
     }
     newEntries.sort((a, b) => a.date.localeCompare(b.date) || a.created_at.localeCompare(b.created_at));
     setEntries(newEntries);
-    setRecords(entriesToRecordsMap(newEntries));
 
     try {
+      // 重新加载热身数据以更新 records
+      const weekStartStr = formatDate(currentWeekStart);
+      const weekEndStr = formatDate(getWeekEnd(currentWeekStart));
+      const warmupsData = await getWarmups(weekStartStr, weekEndStr);
+      setRecords(entriesToRecordsMap(newEntries, warmupsData));
       if (editingEntry) {
         await updateExerciseEntry(editingEntry.id, formData);
       } else {
@@ -218,6 +251,18 @@ function App() {
       // 回滚：重新加载数据
       loadWeekData(false);
       alert('保存失败，请重试');
+    }
+  };
+
+  // 处理热身数据提交
+  const handleWarmupSubmit = async (warmupData: WarmupFormData) => {
+    try {
+      await upsertWarmup(warmupData);
+      // 重新加载周数据以更新热身信息
+      loadWeekData(false);
+    } catch (err) {
+      console.error('Error saving warmup:', err);
+      alert('保存热身记录失败，请重试');
     }
   };
 
@@ -328,6 +373,7 @@ function App() {
         onSubmit={handleFormSubmit}
         initialData={editingEntry}
         defaultDate={defaultFormDate}
+        onWarmupSubmit={handleWarmupSubmit}
       />
     </div>
   );

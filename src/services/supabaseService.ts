@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { ExerciseEntry, ExerciseFormData, WeeklySummary, UserExercise } from '../types';
+import type { ExerciseEntry, ExerciseFormData, WeeklySummary, UserExercise, Warmup, WarmupFormData } from '../types';
 // Date utilities imported as needed
 
 /**
@@ -409,6 +409,113 @@ export async function deleteUserExerciseByName(exercise: string): Promise<void> 
 
     if (error) {
         console.error('Error deleting user exercise by name:', error);
+        throw error;
+    }
+}
+
+/**
+ * 获取指定日期范围内的热身记录
+ */
+export async function getWarmups(
+    startDate: string,
+    endDate: string
+): Promise<Warmup[]> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+        return [];
+    }
+
+    const { data, error } = await supabase
+        .from('daily_warmups')
+        .select('*')
+        .eq('user_id', userData.user.id)
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching warmups:', error);
+        throw error;
+    }
+
+    return data || [];
+}
+
+/**
+ * 获取指定日期的热身记录
+ */
+export async function getWarmupByDate(date: string): Promise<Warmup | null> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+        return null;
+    }
+
+    const { data, error } = await supabase
+        .from('daily_warmups')
+        .select('*')
+        .eq('user_id', userData.user.id)
+        .eq('date', date)
+        .single();
+
+    if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching warmup:', error);
+        throw error;
+    }
+
+    return data || null;
+}
+
+/**
+ * 添加或更新热身记录
+ */
+export async function upsertWarmup(formData: WarmupFormData): Promise<Warmup> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+        throw new Error('User not authenticated');
+    }
+
+    const { data, error } = await supabase
+        .from('daily_warmups')
+        .upsert(
+            {
+                user_id: userData.user.id,
+                date: formData.date,
+                duration: formData.duration,
+                description: formData.description || '',
+                updated_at: new Date().toISOString(),
+            },
+            {
+                onConflict: 'user_id,date',
+            }
+        )
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error upserting warmup:', error);
+        throw error;
+    }
+
+    return data;
+}
+
+/**
+ * 删除热身记录
+ */
+export async function deleteWarmup(date: string): Promise<void> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+        throw new Error('User not authenticated');
+    }
+
+    const { error } = await supabase
+        .from('daily_warmups')
+        .delete()
+        .eq('user_id', userData.user.id)
+        .eq('date', date);
+
+    if (error) {
+        console.error('Error deleting warmup:', error);
         throw error;
     }
 }

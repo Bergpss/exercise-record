@@ -365,3 +365,47 @@
     color: var(--color-primary);
     background: rgba(124, 58, 237, 0.05);
 }
+
+/* Warmup card styles */
+.warmup-card {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.warmup-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.warmup-icon {
+    font-size: 1rem;
+}
+
+.warmup-title {
+    font-weight: 600;
+    color: var(--text-main);
+    font-size: 0.9rem;
+    flex: 1;
+}
+
+.warmup-duration {
+    font-size: 0.75rem;
+    color: var(--warning);
+    font-weight: 600;
+    padding: 0.15rem 0.5rem;
+    background: rgba(245, 158, 11, 0.2);
+    border-radius: var(--radius-sm);
+}
+
+.warmup-description {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(245, 158, 11, 0.2);
+}

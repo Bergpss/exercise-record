@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { ExerciseFormData, ExerciseEntry, ExerciseSet, UserExercise } from '../../types';
+import type { ExerciseFormData, ExerciseEntry, ExerciseSet, UserExercise, Warmup, WarmupFormData } from '../../types';
 import { COMMON_EXERCISES } from '../../types';
 import {
     getUserExercises,
@@ -8,6 +8,8 @@ import {
     deleteUserExercise,
     getHiddenPresetExercises,
     hidePresetExercise,
+    getWarmupByDate,
+    upsertWarmup,
 } from '../../services/supabaseService';
 import './ExerciseForm.css';
 
@@ -17,6 +19,7 @@ interface ExerciseFormProps {
     onSubmit: (data: ExerciseFormData) => void;
     initialData?: ExerciseEntry | null;
     defaultDate?: string;
+    onWarmupSubmit?: (data: WarmupFormData) => void;
 }
 
 export function ExerciseForm({
@@ -25,6 +28,7 @@ export function ExerciseForm({
     onSubmit,
     initialData,
     defaultDate,
+    onWarmupSubmit,
 }: ExerciseFormProps) {
     const [formData, setFormData] = useState<ExerciseFormData>({
         date: defaultDate || new Date().toISOString().split('T')[0],
@@ -33,6 +37,12 @@ export function ExerciseForm({
         duration: 0,
         feeling: '',
     });
+    const [warmupData, setWarmupData] = useState<WarmupFormData>({
+        date: defaultDate || new Date().toISOString().split('T')[0],
+        duration: 0,
+        description: '',
+    });
+    const [currentWarmup, setCurrentWarmup] = useState<Warmup | null>(null);
     const [userExercises, setUserExercises] = useState<UserExercise[]>([]);
     const [hiddenPresetExercises, setHiddenPresetExercises] = useState<string[]>([]);
     const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
@@ -45,8 +55,35 @@ export function ExerciseForm({
         if (isOpen) {
             loadUserExercises();
             loadHiddenPresetExercises();
+            const date = formData.date || defaultDate || new Date().toISOString().split('T')[0];
+            loadWarmup(date);
         }
     }, [isOpen]);
+
+    // 加载当天的热身记录
+    const loadWarmup = async (targetDate?: string) => {
+        const date = targetDate || formData.date || defaultDate || new Date().toISOString().split('T')[0];
+        try {
+            const warmup = await getWarmupByDate(date);
+            if (warmup) {
+                setCurrentWarmup(warmup);
+                setWarmupData({
+                    date: warmup.date,
+                    duration: warmup.duration,
+                    description: warmup.description,
+                });
+            } else {
+                setCurrentWarmup(null);
+                setWarmupData({
+                    date: date,
+                    duration: 0,
+                    description: '',
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load warmup:', error);
+        }
+    };
 
     const loadUserExercises = async () => {
         try {
@@ -80,7 +117,13 @@ export function ExerciseForm({
         } else if (defaultDate) {
             setFormData((prev) => ({ ...prev, date: defaultDate }));
         }
-    }, [initialData, defaultDate]);
+        // 当日期改变时，重新加载热身记录
+        const date = initialData?.date || defaultDate || new Date().toISOString().split('T')[0];
+        setWarmupData((prev) => ({ ...prev, date }));
+        if (isOpen) {
+            loadWarmup(date);
+        }
+    }, [initialData, defaultDate, isOpen]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -110,6 +153,12 @@ export function ExerciseForm({
         }
 
         onSubmit(formData);
+        
+        // 如果有热身数据且提供了回调，保存热身记录
+        if (onWarmupSubmit && (warmupData.duration > 0 || warmupData.description.trim())) {
+            onWarmupSubmit(warmupData);
+        }
+        
         handleClose();
     };
 
@@ -121,6 +170,12 @@ export function ExerciseForm({
             duration: 0,
             feeling: '',
         });
+        setWarmupData({
+            date: new Date().toISOString().split('T')[0],
+            duration: 0,
+            description: '',
+        });
+        setCurrentWarmup(null);
         onClose();
     };
 
@@ -276,9 +331,12 @@ export function ExerciseForm({
                                 type="date"
                                 className="input"
                                 value={formData.date}
-                                onChange={(e) =>
-                                    setFormData((prev) => ({ ...prev, date: e.target.value }))
-                                }
+                                onChange={(e) => {
+                                    const newDate = e.target.value;
+                                    setFormData((prev) => ({ ...prev, date: newDate }));
+                                    setWarmupData((prev) => ({ ...prev, date: newDate }));
+                                    loadWarmup(newDate);
+                                }}
                             />
                         </div>
 
@@ -529,6 +587,50 @@ export function ExerciseForm({
                                     setFormData((prev) => ({ ...prev, feeling: e.target.value }))
                                 }
                             />
+                        </div>
+
+                        <div className="form-group">
+                            <label className="label">热身</label>
+                            <div className="warmup-section">
+                                <div className="warmup-input-group">
+                                    <label className="warmup-label">热身时长（分钟）</label>
+                                    <input
+                                        type="number"
+                                        className="input input-sm"
+                                        min="0"
+                                        placeholder="0"
+                                        value={warmupData.duration || ''}
+                                        onChange={(e) =>
+                                            setWarmupData((prev) => ({
+                                                ...prev,
+                                                duration: parseInt(e.target.value) || 0,
+                                            }))
+                                        }
+                                    />
+                                </div>
+                                <div className="warmup-input-group">
+                                    <label className="warmup-label">热身方式/动作</label>
+                                    <textarea
+                                        className="textarea textarea-sm"
+                                        placeholder="例如：慢跑5分钟、动态拉伸、关节活动..."
+                                        value={warmupData.description}
+                                        onChange={(e) =>
+                                            setWarmupData((prev) => ({
+                                                ...prev,
+                                                description: e.target.value,
+                                            }))
+                                        }
+                                        rows={2}
+                                    />
+                                </div>
+                                {currentWarmup && (
+                                    <div className="warmup-info">
+                                        <span className="warmup-info-text">
+                                            已保存今日热身记录
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 

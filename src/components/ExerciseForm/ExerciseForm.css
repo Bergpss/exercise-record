@@ -358,6 +358,48 @@
     color: var(--error);
 }
 
+/* Warmup section styles */
+.warmup-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin-top: 0.75rem;
+}
+
+.warmup-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.warmup-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.textarea-sm {
+    padding: 0.6rem 0.85rem;
+    font-size: 0.95rem;
+    background: var(--bg-surface);
+    resize: vertical;
+    min-height: 60px;
+}
+
+.warmup-info {
+    padding: 0.5rem 0.75rem;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: var(--radius-sm);
+    margin-top: 0.25rem;
+}
+
+.warmup-info-text {
+    font-size: 0.8rem;
+    color: var(--success);
+    font-weight: 500;
+}
+
 /* Scrollbar within modal */
 .modal::-webkit-scrollbar {
     width: 6px;

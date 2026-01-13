@@ -84,6 +84,21 @@ export function DayCard({
                 </div>
             )}
 
+            {record?.warmup && (
+                <div className="warmup-card">
+                    <div className="warmup-header">
+                        <span className="warmup-icon">🔥</span>
+                        <span className="warmup-title">热身</span>
+                        {record.warmup.duration > 0 && (
+                            <span className="warmup-duration">{record.warmup.duration}分钟</span>
+                        )}
+                    </div>
+                    {record.warmup.description && (
+                        <div className="warmup-description">{record.warmup.description}</div>
+                    )}
+                </div>
+            )}
+
             <div className="day-card-content">
                 {hasEntries ? (
                     <div className="exercise-list">
