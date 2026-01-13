@@ -1,10 +1,6 @@
 import type { Plugin } from 'vite';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { join } from 'path';
 import { readFileSync, existsSync } from 'fs';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 /**
  * Load environment variables from .env files
