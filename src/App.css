@@ -6,71 +6,46 @@
 
 .main-content {
   flex: 1;
-  max-width: 1400px;
   width: 100%;
+  max-width: 1600px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 0 var(--space-md) var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
 }
 
-/* 加载状态 */
 .loading-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
-  padding: 4rem;
+  gap: var(--space-md);
+  padding: var(--space-2xl);
   color: var(--text-secondary);
-  font-size: 1.1rem;
 }
 
-.loading-spinner {
-  width: 24px;
-  height: 24px;
-  border: 3px solid var(--border-color);
-  border-top-color: var(--primary-color);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+.loading-state.full-screen {
+  flex: 1;
+  min-height: 100vh;
 }
 
-.loading-spinner.large {
-  width: 48px;
-  height: 48px;
-  border-width: 4px;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* 错误状态 */
 .error-message {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  padding: 3rem;
-  background: var(--bg-card);
-  border: 1px solid var(--danger-color);
-  border-radius: var(--radius-lg);
-  color: var(--text-primary);
-  text-align: center;
+  justify-content: center;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-md);
+  color: #fca5a5;
+  margin: var(--space-lg) 0;
 }
 
-.error-message span:first-child {
-  font-size: 2rem;
-}
-
-/* 响应式调整 */
 @media (max-width: 768px) {
   .main-content {
-    padding: 1rem;
+    padding: 0 var(--space-sm) var(--space-xl);
+    gap: var(--space-lg);
   }
-}
-
-/* 全屏加载状态 */
-.loading-state.full-screen {
-  min-height: 100vh;
 }
