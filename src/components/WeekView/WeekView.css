@@ -1,32 +1,28 @@
 .week-view {
-    padding: 2rem;
-    flex: 1;
+    width: 100%;
+    animation: fadeIn 0.5s var(--ease-out);
 }
 
 .week-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 1rem;
-    margin-bottom: 2rem;
+    gap: var(--space-md);
+    width: 100%;
 }
 
-@media (max-width: 1400px) {
+@media (max-width: 1600px) {
     .week-grid {
         grid-template-columns: repeat(4, 1fr);
     }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
     .week-grid {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
-@media (max-width: 600px) {
-    .week-view {
-        padding: 1rem;
-    }
-
+@media (max-width: 640px) {
     .week-grid {
         grid-template-columns: 1fr;
     }
