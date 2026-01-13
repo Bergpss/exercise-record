@@ -143,9 +143,7 @@
 }
 
 .exercise-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
+    display: inline-block;
     position: relative;
 }
 
@@ -163,20 +161,54 @@
 }
 
 .exercise-edit-btn {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     border: none;
     border-radius: 50%;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     cursor: pointer;
     transition: all var(--transition-fast);
     background: transparent;
     color: var(--text-muted);
     flex-shrink: 0;
+    line-height: 1;
+}
+
+/* 当删除按钮在 exercise-item 内时，定位到右上角 */
+.exercise-item .exercise-edit-btn.delete {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 18px;
+    height: 18px;
+    background: var(--bg-surface);
+    border: 1px solid var(--bg-glass-border);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 1;
+}
+
+/* 编辑按钮定位到左上角（仅用于用户自定义动作） */
+.exercise-item .exercise-edit-btn.edit {
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    width: 18px;
+    height: 18px;
+    background: var(--bg-surface);
+    border: 1px solid var(--bg-glass-border);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 1;
+}
+
+.exercise-item .exercise-edit-btn.edit:hover {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+    transform: scale(1.1);
 }
 
 .exercise-edit-btn:hover {
@@ -194,13 +226,15 @@
     color: var(--color-primary);
 }
 
-.exercise-edit-btn.delete {
+.exercise-item .exercise-edit-btn.delete {
     color: var(--error);
 }
 
-.exercise-edit-btn.delete:hover {
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--error);
+.exercise-item .exercise-edit-btn.delete:hover {
+    background: var(--error);
+    color: white;
+    border-color: var(--error);
+    transform: scale(1.1);
 }
 
 .exercise-edit-btn.save {

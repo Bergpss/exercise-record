@@ -6,6 +6,8 @@ import {
     addUserExercise,
     updateUserExercise,
     deleteUserExercise,
+    getHiddenPresetExercises,
+    hidePresetExercise,
 } from '../../services/supabaseService';
 import './ExerciseForm.css';
 
@@ -32,24 +34,36 @@ export function ExerciseForm({
         feeling: '',
     });
     const [userExercises, setUserExercises] = useState<UserExercise[]>([]);
+    const [hiddenPresetExercises, setHiddenPresetExercises] = useState<string[]>([]);
     const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
     const [editingExerciseName, setEditingExerciseName] = useState<string>('');
     const [isAddingExercise, setIsAddingExercise] = useState(false);
     const [newExerciseName, setNewExerciseName] = useState('');
 
-    // 加载用户自定义动作
+    // 加载用户自定义动作和隐藏的预设动作
     useEffect(() => {
         if (isOpen) {
             loadUserExercises();
+            loadHiddenPresetExercises();
         }
     }, [isOpen]);
 
     const loadUserExercises = async () => {
         try {
             const exercises = await getUserExercises();
-            setUserExercises(exercises);
+            // 过滤掉隐藏的预设动作（这些单独管理）
+            setUserExercises(exercises.filter((ex) => !ex.is_hidden_preset));
         } catch (error) {
             console.error('Failed to load user exercises:', error);
+        }
+    };
+
+    const loadHiddenPresetExercises = async () => {
+        try {
+            const hidden = await getHiddenPresetExercises();
+            setHiddenPresetExercises(hidden);
+        } catch (error) {
+            console.error('Failed to load hidden preset exercises:', error);
         }
     };
 
@@ -88,6 +102,7 @@ export function ExerciseForm({
             try {
                 await addUserExercise(exerciseName);
                 await loadUserExercises();
+                await loadHiddenPresetExercises();
             } catch (error) {
                 console.error('Failed to save exercise:', error);
                 // 即使保存失败也继续提交表单
@@ -159,6 +174,7 @@ export function ExerciseForm({
 
             await updateUserExercise(editingExerciseId, editingExerciseName.trim());
             await loadUserExercises();
+            await loadHiddenPresetExercises();
             setEditingExerciseId(null);
             setEditingExerciseName('');
 
@@ -187,6 +203,7 @@ export function ExerciseForm({
         try {
             await deleteUserExercise(id);
             await loadUserExercises();
+            await loadHiddenPresetExercises();
 
             // 如果当前选中的动作被删除了，清空表单
             const deletedExercise = userExercises.find((ue) => ue.id === id);
@@ -208,11 +225,32 @@ export function ExerciseForm({
         try {
             await addUserExercise(newExerciseName.trim());
             await loadUserExercises();
+            await loadHiddenPresetExercises();
             setNewExerciseName('');
             setIsAddingExercise(false);
         } catch (error) {
             console.error('Failed to add exercise:', error);
             alert('添加动作失败，请重试');
+        }
+    };
+
+    // 隐藏预设动作
+    const handleHidePresetExercise = async (exercise: string) => {
+        if (!confirm(`确定要隐藏"${exercise}"这个预设动作吗？`)) {
+            return;
+        }
+
+        try {
+            await hidePresetExercise(exercise);
+            await loadHiddenPresetExercises();
+
+            // 如果当前选中的动作被隐藏了，清空表单
+            if (formData.exercise === exercise) {
+                setFormData((prev) => ({ ...prev, exercise: '' }));
+            }
+        } catch (error) {
+            console.error('Failed to hide preset exercise:', error);
+            alert('隐藏动作失败，请重试');
         }
     };
 
@@ -257,17 +295,28 @@ export function ExerciseForm({
                             />
                             <div className="exercise-suggestions">
                                 {/* 默认预设动作 */}
-                                {COMMON_EXERCISES.map((exercise) => (
-                                    <button
-                                        key={exercise}
-                                        type="button"
-                                        className={`suggestion-btn ${
-                                            formData.exercise === exercise ? 'active' : ''
-                                        }`}
-                                        onClick={() => selectExercise(exercise)}
-                                    >
-                                        {exercise}
-                                    </button>
+                                {COMMON_EXERCISES.filter(
+                                    (exercise) => !hiddenPresetExercises.includes(exercise)
+                                ).map((exercise) => (
+                                    <div key={exercise} className="exercise-item">
+                                        <button
+                                            type="button"
+                                            className={`suggestion-btn ${
+                                                formData.exercise === exercise ? 'active' : ''
+                                            }`}
+                                            onClick={() => selectExercise(exercise)}
+                                        >
+                                            {exercise}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="exercise-edit-btn delete"
+                                            onClick={() => handleHidePresetExercise(exercise)}
+                                            title="隐藏"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
                                 ))}
 
                                 {/* 用户自定义动作 */}

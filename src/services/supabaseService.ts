@@ -203,9 +203,32 @@ export async function getUserExercises(): Promise<UserExercise[]> {
 }
 
 /**
- * 添加用户自定义动作
+ * 获取用户隐藏的预设动作列表
  */
-export async function addUserExercise(exercise: string): Promise<UserExercise> {
+export async function getHiddenPresetExercises(): Promise<string[]> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+        return [];
+    }
+
+    const { data, error } = await supabase
+        .from('user_exercises')
+        .select('exercise')
+        .eq('user_id', userData.user.id)
+        .eq('is_hidden_preset', true);
+
+    if (error) {
+        console.error('Error fetching hidden preset exercises:', error);
+        throw error;
+    }
+
+    return (data || []).map((item) => item.exercise);
+}
+
+/**
+ * 隐藏预设动作
+ */
+export async function hidePresetExercise(exercise: string): Promise<void> {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) {
         throw new Error('User not authenticated');
@@ -220,6 +243,88 @@ export async function addUserExercise(exercise: string): Promise<UserExercise> {
         .single();
 
     if (existing) {
+        // 如果已存在，更新为隐藏状态
+        const { error } = await supabase
+            .from('user_exercises')
+            .update({ is_hidden_preset: true })
+            .eq('id', existing.id);
+
+        if (error) {
+            console.error('Error hiding preset exercise:', error);
+            throw error;
+        }
+    } else {
+        // 如果不存在，创建新记录
+        const { error } = await supabase
+            .from('user_exercises')
+            .insert({
+                user_id: userData.user.id,
+                exercise: exercise.trim(),
+                is_hidden_preset: true,
+            });
+
+        if (error) {
+            console.error('Error hiding preset exercise:', error);
+            throw error;
+        }
+    }
+}
+
+/**
+ * 显示预设动作（取消隐藏）
+ */
+export async function showPresetExercise(exercise: string): Promise<void> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+        throw new Error('User not authenticated');
+    }
+
+    const { error } = await supabase
+        .from('user_exercises')
+        .delete()
+        .eq('user_id', userData.user.id)
+        .eq('exercise', exercise.trim())
+        .eq('is_hidden_preset', true);
+
+    if (error) {
+        console.error('Error showing preset exercise:', error);
+        throw error;
+    }
+}
+
+/**
+ * 添加用户自定义动作
+ */
+export async function addUserExercise(exercise: string): Promise<UserExercise> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+        throw new Error('User not authenticated');
+    }
+
+    // 检查是否已存在（包括隐藏的预设动作）
+    const { data: existing } = await supabase
+        .from('user_exercises')
+        .select('*')
+        .eq('user_id', userData.user.id)
+        .eq('exercise', exercise.trim())
+        .single();
+
+    if (existing) {
+        // 如果存在且是隐藏的预设动作，更新为非隐藏状态
+        if (existing.is_hidden_preset) {
+            const { data, error } = await supabase
+                .from('user_exercises')
+                .update({ is_hidden_preset: false })
+                .eq('id', existing.id)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('Error updating hidden preset exercise:', error);
+                throw error;
+            }
+            return data;
+        }
         return existing;
     }
 
@@ -228,6 +333,7 @@ export async function addUserExercise(exercise: string): Promise<UserExercise> {
         .insert({
             user_id: userData.user.id,
             exercise: exercise.trim(),
+            is_hidden_preset: false,
         })
         .select()
         .single();
@@ -282,6 +388,27 @@ export async function deleteUserExercise(id: string): Promise<void> {
 
     if (error) {
         console.error('Error deleting user exercise:', error);
+        throw error;
+    }
+}
+
+/**
+ * 通过动作名称删除用户自定义动作（用于删除隐藏的预设动作）
+ */
+export async function deleteUserExerciseByName(exercise: string): Promise<void> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+        throw new Error('User not authenticated');
+    }
+
+    const { error } = await supabase
+        .from('user_exercises')
+        .delete()
+        .eq('user_id', userData.user.id)
+        .eq('exercise', exercise.trim());
+
+    if (error) {
+        console.error('Error deleting user exercise by name:', error);
         throw error;
     }
 }

@@ -73,6 +73,7 @@ export interface UserExercise {
     id: string;
     user_id: string;
     exercise: string;
+    is_hidden_preset?: boolean; // 标记是否为隐藏的预设动作
     created_at: string;
     updated_at: string;
 }
