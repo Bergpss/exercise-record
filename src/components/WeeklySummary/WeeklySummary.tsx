@@ -22,6 +22,10 @@ export function WeeklySummary({
         exerciseStats[entry.exercise] = (exerciseStats[entry.exercise] || 0) + entry.count;
     });
 
+    // 计算有锻炼的天数（唯一日期数量）
+    const uniqueDates = new Set(entries.map((e) => e.date));
+    const trainingDays = uniqueDates.size;
+
     const hasData = entries.length > 0;
 
     return (
@@ -66,7 +70,7 @@ export function WeeklySummary({
                                 <div className="stat-card-label">总训练时长（分钟）</div>
                             </div>
                             <div className="stat-card">
-                                <div className="stat-card-value">{entries.length}</div>
+                                <div className="stat-card-value">{trainingDays}</div>
                                 <div className="stat-card-label">训练次数</div>
                             </div>
                             <div className="stat-card">
