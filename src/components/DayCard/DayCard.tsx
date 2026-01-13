@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { DayRecord, ExerciseEntry } from '../../types';
 import { getDayName, formatDateShort, isToday, formatDate } from '../../utils/dateUtils';
 import './DayCard.css';
@@ -37,6 +38,21 @@ export function DayCard({
 
     // 将相同动作的记录分组
     const groupedEntries = hasEntries ? groupEntriesByExercise(record.entries) : new Map();
+    
+    // 管理每个动作的展开/收起状态，默认全部收起
+    const [expandedExercises, setExpandedExercises] = useState<Set<string>>(new Set());
+    
+    const toggleExercise = (exercise: string) => {
+        setExpandedExercises((prev) => {
+            const next = new Set(prev);
+            if (next.has(exercise)) {
+                next.delete(exercise);
+            } else {
+                next.add(exercise);
+            }
+            return next;
+        });
+    };
 
     return (
         <div className={`day-card ${today ? 'is-today' : ''} ${!hasEntries ? 'is-rest' : ''}`}>
@@ -71,44 +87,63 @@ export function DayCard({
             <div className="day-card-content">
                 {hasEntries ? (
                     <div className="exercise-list">
-                        {Array.from(groupedEntries.entries()).map(([exercise, entries]) => (
-                            <div key={exercise} className="exercise-item">
-                                <div className="exercise-header">
-                                    <span className="exercise-name">{exercise}</span>
-                                    <span className="exercise-sets-count">{entries.length}组</span>
-                                </div>
-                                <div className="exercise-sets">
-                                    {entries.map((entry: ExerciseEntry) => (
-                                        <div key={entry.id} className="exercise-set">
-                                            <span className="set-details">
-                                                {entry.weight ? (
-                                                    <span className="set-weight">{entry.weight}kg</span>
-                                                ) : (
-                                                    <span className="set-weight bodyweight">徒手</span>
-                                                )}
-                                                <span className="set-count">×{entry.count}</span>
-                                            </span>
-                                            <div className="set-actions">
-                                                <button
-                                                    className="action-btn"
-                                                    onClick={() => onEditClick(entry.id)}
-                                                    title="编辑"
-                                                >
-                                                    ✏️
-                                                </button>
-                                                <button
-                                                    className="action-btn delete"
-                                                    onClick={() => onDeleteClick(entry.id)}
-                                                    title="删除"
-                                                >
-                                                    🗑️
-                                                </button>
-                                            </div>
+                        {Array.from(groupedEntries.entries()).map(([exercise, entries]) => {
+                            const isExpanded = expandedExercises.has(exercise);
+                            return (
+                                <div key={exercise} className="exercise-item">
+                                    <div 
+                                        className="exercise-header"
+                                        onClick={() => toggleExercise(exercise)}
+                                    >
+                                        <div className="exercise-header-left">
+                                            <button className="expand-toggle" title={isExpanded ? '收起' : '展开'}>
+                                                <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>▼</span>
+                                            </button>
+                                            <span className="exercise-name">{exercise}</span>
                                         </div>
-                                    ))}
+                                        <span className="exercise-sets-count">{entries.length}组</span>
+                                    </div>
+                                    {isExpanded && (
+                                        <div className="exercise-sets">
+                                            {entries.map((entry: ExerciseEntry) => (
+                                                <div key={entry.id} className="exercise-set">
+                                                    <span className="set-details">
+                                                        {entry.weight ? (
+                                                            <span className="set-weight">{entry.weight}kg</span>
+                                                        ) : (
+                                                            <span className="set-weight bodyweight">徒手</span>
+                                                        )}
+                                                        <span className="set-count">×{entry.count}</span>
+                                                    </span>
+                                                    <div className="set-actions">
+                                                        <button
+                                                            className="action-btn"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                onEditClick(entry.id);
+                                                            }}
+                                                            title="编辑"
+                                                        >
+                                                            ✏️
+                                                        </button>
+                                                        <button
+                                                            className="action-btn delete"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                onDeleteClick(entry.id);
+                                                            }}
+                                                            title="删除"
+                                                        >
+                                                            🗑️
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 ) : (
                     <div className="empty-day">

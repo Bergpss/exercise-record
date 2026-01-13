@@ -155,6 +155,52 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 0.25rem;
+    cursor: pointer;
+    user-select: none;
+    padding: 0.25rem;
+    margin: -0.25rem;
+    border-radius: var(--radius-sm);
+    transition: background-color var(--transition-fast);
+}
+
+.exercise-header:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.exercise-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.expand-toggle {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.expand-toggle:hover {
+    color: var(--text-main);
+}
+
+.expand-icon {
+    font-size: 0.7rem;
+    transition: transform var(--transition-fast);
+    display: inline-block;
+}
+
+.expand-icon.expanded {
+    transform: rotate(180deg);
 }
 
 .exercise-name {
@@ -176,6 +222,21 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+    animation: slideDown var(--transition-normal) ease-out;
+    margin-top: var(--space-xs);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        max-height: 1000px;
+        transform: translateY(0);
+    }
 }
 
 .exercise-set {
